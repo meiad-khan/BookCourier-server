@@ -63,6 +63,11 @@ async function run() {
       const result = await bookCollection.find(query).sort({ createdAt: -1 }).limit(6).toArray();
       res.send(result);
     })
+    app.get('/all-books', async (req, res) => {
+      const query = { bookStatus: 'Published' };
+      const result = await bookCollection.find(query).toArray();
+      res.send(result);
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
