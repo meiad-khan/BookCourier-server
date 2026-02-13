@@ -1,7 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const port = process.env.PORT || 3000;
 
@@ -63,7 +63,7 @@ async function run() {
       const result = await bookCollection.find(query).sort({ createdAt: -1 }).limit(6).toArray();
       res.send(result);
     })
-    
+
     app.get('/all-books', async (req, res) => {
        const {
          limit = 0,
@@ -90,6 +90,13 @@ async function run() {
         .toArray();
       const count = await bookCollection.countDocuments(query);
       res.send({ result, total: count });
+    })
+
+    app.get("/all-books/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookCollection.findOne(query);
+      res.send(result);
     })
 
     // Send a ping to confirm a successful connection
