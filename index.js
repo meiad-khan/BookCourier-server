@@ -63,10 +63,33 @@ async function run() {
       const result = await bookCollection.find(query).sort({ createdAt: -1 }).limit(6).toArray();
       res.send(result);
     })
+    
     app.get('/all-books', async (req, res) => {
+       const {
+         limit = 0,
+         skip = 0,
+         sort = "price",
+         order = "asc",
+         search = "",
+       } = req.query;
+      const sortOption = {};
+      sortOption[sort || "price"] = order === "asc" ? 1 : -1;
+      if (search) {
+        query.$or = [
+          { bookName: { $regex: search, $options: "i" } },
+          { bookAuthor: { $regex: search, $options: "i" } },
+          { bookPrice: { $regex: search, $options: "i" } },
+        ];
+      }
       const query = { bookStatus: 'Published' };
-      const result = await bookCollection.find(query).toArray();
-      res.send(result);
+      const result = await bookCollection
+        .find(query)
+        .sort(sortOption)
+        .limit(Number(limit))
+        .skip(Number(skip))
+        .toArray();
+      const count = await bookCollection.countDocuments(query);
+      res.send({ result, total: count });
     })
 
     // Send a ping to confirm a successful connection
