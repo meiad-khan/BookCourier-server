@@ -110,6 +110,16 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/orders', async (req, res) => {
+      const { email } = req.query;
+      const query = {};
+      if (email) {
+        query.customerEmail = email;
+      }
+      const result = await orderCollection.find(query).toArray();
+      res.send(result);
+    })
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
