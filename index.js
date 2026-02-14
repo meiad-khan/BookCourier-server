@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  res.send("book courier server is running");
 });
 
 const uri =
@@ -33,6 +33,7 @@ async function run() {
     const db = client.db('BookCourier_DB');
     const userCollection = db.collection('users');
     const bookCollection = db.collection('books');
+    const orderCollection = db.collection('orders');
 
     //user related api
     app.post("/users", async (req, res) => {
@@ -96,6 +97,16 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await bookCollection.findOne(query);
+      res.send(result);
+    })
+
+    //orders related api.
+    app.post('/orders', async (req, res) => {
+      const order = req.body;
+      order.orderStatus = 'pending';
+      order.paymentStatus = 'unpaid';
+      order.createdAt = new Date();
+      const result = await orderCollection.insertOne(order);
       res.send(result);
     })
 
