@@ -3,15 +3,26 @@ const app = express();
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 const port = process.env.PORT || 3000;
 
 
+//middleware
 app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
   res.send("book courier server is running");
 });
+
+function generateTrackingId() {
+  const prefix = "LIB";
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const random = crypto.randomBytes(3).toString("hex").toUpperCase();
+
+  return `${prefix}-${date}-${random}`;
+}
 
 const uri =
   `${process.env.URI}`;
@@ -34,6 +45,7 @@ async function run() {
     const userCollection = db.collection('users');
     const bookCollection = db.collection('books');
     const orderCollection = db.collection('orders');
+    const paymentCollection = db.collection('payments');
 
     //user related api
     app.post("/users", async (req, res) => {
@@ -119,6 +131,104 @@ async function run() {
       const result = await orderCollection.find(query).toArray();
       res.send(result);
     })
+
+    app.patch("/orders/cancel/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await orderCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { orderStatus: "cancelled" } },
+      );
+      res.send(result);
+    });
+
+
+    //payment related api
+     app.post("/create-checkout-session", async (req, res) => {
+       const paymentInfo = req.body;
+       const amount = parseInt(paymentInfo.amount) * 100;
+       const session = await stripe.checkout.sessions.create({
+         line_items: [
+           {
+             price_data: {
+               currency: "USD",
+               unit_amount: amount,
+               product_data: {
+                 name: `Please pay for: ${paymentInfo.bookName}`,
+               },
+             },
+             quantity: 1,
+           },
+         ],
+         customer_email: paymentInfo.customerEmail,
+         metadata: {
+           orderId: paymentInfo.orderId,
+           productName: paymentInfo.bookName,
+         },
+         mode: "payment",
+         success_url: `${process.env.SITE_DIMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+         cancel_url: `${process.env.SITE_DIMAIN}/dashboard/payment-cancelled`,
+       });
+
+       res.send({ url: session.url });
+     });
+    
+    
+     app.patch("/payment-success", async (req, res) => {
+       const trackingId = generateTrackingId();
+       const sessionId = req.query.session_id;
+       // console.log('session id is ', sessionId);
+       const session = await stripe.checkout.sessions.retrieve(sessionId);
+       // console.log('session is ', session);
+
+       const transactionId = session.payment_intent;
+       const query = { transactionId: transactionId };
+       const paymentExist = await paymentCollection.findOne(query);
+       console.log("payment exist ", paymentExist);
+       if (paymentExist) {
+         return res.send({
+           message: "Already exist this payment",
+           transactionId,
+           trackingId: paymentExist.trackingId,
+         });
+       }
+
+       if (session.payment_status === "paid") {
+         const id = session.metadata.orderId;
+         // console.log('parcel id is ', id);
+         const query = { _id: new ObjectId(id) };
+         const update = {
+           $set: {
+             paymentStatus: "paid",
+             trackingId: trackingId,
+           },
+         };
+         const result = await orderCollection.updateOne(query, update);
+         const payment = {
+           amount: session.amount_total / 100,
+           currency: session.currency,
+           customerEmail: session.customer_email,
+           orderId: session.metadata.parcelId,
+           bookName: session.metadata.productName,
+           transactionId: session.payment_intent,
+           paymentStatus: session.payment_status,
+           paidAt: new Date(),
+           trackingId,
+         };
+         if (session.payment_status === "paid") {
+           const resultPay = await paymentCollection.insertOne(payment);
+           res.send({
+             success: true,
+             trackingId: trackingId,
+             transactionId: session.payment_intent,
+             modifyParcel: result,
+             paymentInfo: resultPay,
+           });
+         }
+       }
+       res.send({ success: false });
+     });
+
+    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
