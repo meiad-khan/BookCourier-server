@@ -95,6 +95,16 @@ async function run() {
       res.send({ result, total: count });
     })
 
+    app.get('/books', async (req, res) => {
+      const { email } = req.query;
+      const query = {};
+      if (email) {
+        query.librarianEmail = email;
+      }
+      const result = await bookCollection.find(query).toArray();
+      res.send(result);
+    })
+
 
     app.get("/all-books/:id", async (req, res) => {
       const id = req.params.id;
@@ -102,6 +112,14 @@ async function run() {
       const result = await bookCollection.findOne(query);
       res.send(result);
     })
+
+    app.patch('/all-books/:id', async (req, res) => {
+      const updatedBook = req.body;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookCollection.updateOne(query, { $set: updatedBook });
+      res.send(result);
+    }) 
 
     //orders related api.
     app.post('/orders', async (req, res) => {
