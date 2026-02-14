@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require('cors');
+const crypto = require('crypto');
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -79,31 +80,21 @@ async function run() {
 
     app.get('/all-books', async (req, res) => {
        const {
-         limit = 0,
+         limit = 6,
          skip = 0,
-         sort = "price",
-         order = "asc",
-         search = "",
        } = req.query;
-      const sortOption = {};
-      sortOption[sort || "price"] = order === "asc" ? 1 : -1;
-      if (search) {
-        query.$or = [
-          { bookName: { $regex: search, $options: "i" } },
-          { bookAuthor: { $regex: search, $options: "i" } },
-          { bookPrice: { $regex: search, $options: "i" } },
-        ];
-      }
+      const skipNum = parseInt(skip);
+      const limitNum = parseInt(limit);
       const query = { bookStatus: 'Published' };
       const result = await bookCollection
         .find(query)
-        .sort(sortOption)
-        .limit(Number(limit))
-        .skip(Number(skip))
+        .skip(skipNum)
+        .limit(limitNum)
         .toArray();
       const count = await bookCollection.countDocuments(query);
       res.send({ result, total: count });
     })
+
 
     app.get("/all-books/:id", async (req, res) => {
       const id = req.params.id;
@@ -207,7 +198,7 @@ async function run() {
            amount: session.amount_total / 100,
            currency: session.currency,
            customerEmail: session.customer_email,
-           orderId: session.metadata.parcelId,
+           orderId: session.metadata.orderId,
            bookName: session.metadata.productName,
            transactionId: session.payment_intent,
            paymentStatus: session.payment_status,
@@ -227,6 +218,17 @@ async function run() {
        }
        res.send({ success: false });
      });
+    
+    
+    app.get('/payments', async (req, res) => {
+      const { email } = req.query;
+      const query = {};
+      if (email) {
+        query.customerEmail = email;
+      }
+      const result = await paymentCollection.find(query).sort({ paidAt: -1 }).toArray();
+      res.send(result);
+    })
 
     
 
