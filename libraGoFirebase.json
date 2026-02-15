@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "librago-app",
+  "private_key_id": "31716fd0d277130268e15879bed5deb808fb22e6",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDU003eb4IH3pcN\nZxSRxcQ+n11OYizoPm3QRaOFmi6xVv9hHanOMjQCWJ6P9pTq1eBXr73M6kqqPoQC\nVBSieToqEITy8ye+MgYM+8yXzLbrEK0lxykE+nV6Vbggp01aNXXHhBcNUtp2sEya\nAHoYYWV6kEp9+pO6MHn7GUlhdNoX2KaHLbb9+/+02z3wSnQvcNJAVf2sjIwHxIsF\nE5dW1f+y74mw9uOsRoWZwQgi/XKKvGSD2+BA/6mE1c4lzpu5WSNyBS56tEqg6GTb\nB97Ke3etzzTNxCRmXp7M9vN40LNET+w/84rlWDLykc4baKquJhray3gsRngZ8vQN\nAiJFonUFAgMBAAECggEAByc6Awuu7GpKG/B2w8aIp80t8uxAU6cDhGBO1Hb/8kR5\nDW/UjQJpdpm5bJ/OVg1NvszAnaJTU6EJyVU/o01dS9wlx8+t6oneY7HT6Nc/36s+\nEpq80XbEm5HFgE13P1y0InpZVwCNqLcYwAVblTWy1jmC03SoYfXup6asLXsiuHHn\nRmObqWhI5+Gn6b1kY6x4/RkBlDr8sk29wjp+rhHGrJp+Qwe6W4yF1b7C7zxxkZNs\ngQJaK0Gcx6CG/QRhg4uRnwJA3/cwmzSGYyuYLNVnmYXWKP+mIz1cw4UpZNj6WCHS\nrtST1gbWSWUkEaCYFTi0aiJ/J9FE4yu4IpYVBM1ZKQKBgQDwYIw0yOEygNu4Y5t7\ntJbnY9rH/VhTLai3T4WFi/QtabbBZ5APmnoySNtJd2KDjF/9hqxItLxC/RVexkXj\nKSJCBvTMuKEiPkjyxAYq7yfeK/FEC3SEzVp68kJFEt4LO7kKc/ATn17ngjWuGQPh\nKyNYJwf4tvxyknVbz6MkiT0s3QKBgQDiqFgcXorx6KcEJwtKhbvTucL7qfdrWBi9\nbYc5J20UsJQd2YrtX3mXavotqL4zEPTt/ALqFFKBNCA+YclVsvutUHbt1XnMnS5/\n7Ryu5ZLUho1Zz360gDuL+Hdi03+i0esTHSH7okoHr4hv/pkAvKaVZUwqfr2bI2oI\n0d91VouySQKBgQC7npAw7w4fDkbxcAW/E6CpcN4mNQ9ItR24HsCYEToAbD/yS3Q9\nSZTRRN6sRBvHk7yktQYqJa/AFawlclrASK3tnWJbnExg3v6vReOOhWa32dKSCuLi\neSqDRi4Fnglj+TSf/QhJOJ6p0o81mV7W1IXc23I0Zhc7Eie6BqJO9TOjnQKBgQCm\ne9TMcb1JVwRmjm9Cu9xs9kN8KyorVLhHW445svXyfoktK79aAAkF6XP92bZrOAdQ\nTw2s9mRrtugAKj+CjUdD1JimtWkTnFitanLpHIOvS23EDB8bYh1bAJRgqM1VwS8U\nCRAPDvOllY94A+BKpEcP8SnzBMksjOSzucSTIZDW0QKBgE9w8bG6Ki0Qo7eov4E0\nM0TKZSeV3a2DsYZMuP+s/c4WqoryNJXH1LIVBAlGgfwitG3ZCqCLAiDQ2QtoCJFW\nG0S+mpBUhf3OHslSgbvCCPZtwc+MKNcOh+hrp7ooCrUbP30gQ47JWuECSkXiCvjU\nwzpQu4bjc0ImFOYEqK8IjBw3\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@librago-app.iam.gserviceaccount.com",
+  "client_id": "111722552816980321929",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40librago-app.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

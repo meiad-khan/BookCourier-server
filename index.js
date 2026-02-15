@@ -13,6 +13,32 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+const admin = require("firebase-admin");
+
+const serviceAccount = require("./libraGoFirebase.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+const verifyFBToken = async (req, res, next) => {
+  const token = req.headers.authorization;
+  // console.log({ token });
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  try {
+    const idToken = token.split(" ")[1];
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    // console.log({ decoded });
+    req.decoded_email = decoded.email;
+    next();
+  } catch (err) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+};
+
+
 app.get("/", (req, res) => {
   res.send("book courier server is running");
 });
@@ -42,11 +68,22 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-    const db = client.db('BookCourier_DB');
-    const userCollection = db.collection('users');
-    const bookCollection = db.collection('books');
-    const orderCollection = db.collection('orders');
-    const paymentCollection = db.collection('payments');
+    const db = client.db("BookCourier_DB");
+    const userCollection = db.collection("users");
+    const bookCollection = db.collection("books");
+    const orderCollection = db.collection("orders");
+    const paymentCollection = db.collection("payments");
+
+    //middleware with database access
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded_email;
+      const query = { email };
+      const user = await userCollection.findOne(query);
+      if (!user || user.role !== "admin") {
+        return res.status(403).send({ message: "forbidden accedd" });
+      }
+      next();
+    };
 
     //user related api
     app.post("/users", async (req, res) => {
@@ -63,51 +100,51 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/users', async(req, res) => {
+    app.get("/users", verifyFBToken, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
-    })
+    });
 
-    app.patch("/users/role/:id", async (req, res) => {
+    app.patch("/users/role/:id", verifyFBToken, verifyAdmin, async (req, res) => {
       const { id } = req.params;
       const { role } = req.body;
       const query = { _id: new ObjectId(id) };
       const result = await userCollection.updateOne(query, {
-        $set: { role }
+        $set: { role },
       });
       res.send(result);
-    })
+    });
 
-    app.get('/users/:email/role', async (req, res) => {
+    app.get("/users/:email/role", async (req, res) => {
       const email = req.params.email;
       const query = { email };
       const user = await userCollection.findOne(query);
-      res.send({ role: user?.role || 'user' });
-    })
-
+      res.send({ role: user?.role || "user" });
+    });
 
     //book related api
-    app.post('/books', async (req, res) => {
+    app.post("/books", async (req, res) => {
       const newBook = req.body;
       newBook.createdAt = new Date();
       const result = await bookCollection.insertOne(newBook);
       res.send(result);
-    })
+    });
 
-    app.get('/latest-books', async (req, res) => {
-      const query = { bookStatus: 'Published' };
-      const result = await bookCollection.find(query).sort({ createdAt: -1 }).limit(6).toArray();
+    app.get("/latest-books", async (req, res) => {
+      const query = { bookStatus: "Published" };
+      const result = await bookCollection
+        .find(query)
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .toArray();
       res.send(result);
-    })
+    });
 
-    app.get('/all-books/published', async (req, res) => {
-       const {
-         limit = 0,
-         skip = 0,
-       } = req.query;
+    app.get("/all-books/published", async (req, res) => {
+      const { limit = 0, skip = 0 } = req.query;
       const skipNum = parseInt(skip);
       const limitNum = parseInt(limit);
-      const query = { bookStatus: 'Published' };
+      const query = { bookStatus: "Published" };
       const result = await bookCollection
         .find(query)
         .skip(skipNum)
@@ -115,14 +152,14 @@ async function run() {
         .toArray();
       const count = await bookCollection.countDocuments(query);
       res.send({ result, total: count });
-    })
+    });
 
-    app.get('/all-books', async (req, res) => {
+    app.get("/all-books", async (req, res) => {
       const result = await bookCollection.find().toArray();
       res.send(result);
-    })
+    });
 
-    app.get('/books', async (req, res) => {
+    app.get("/books", async (req, res) => {
       const { email } = req.query;
       const query = {};
       if (email) {
@@ -130,51 +167,50 @@ async function run() {
       }
       const result = await bookCollection.find(query).toArray();
       res.send(result);
-    })
-
+    });
 
     app.get("/all-books/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await bookCollection.findOne(query);
       res.send(result);
-    })
+    });
 
-    app.patch('/all-books/:id', async (req, res) => {
+    app.patch("/all-books/:id", verifyFBToken, async (req, res) => {
       const updatedBook = req.body;
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await bookCollection.updateOne(query, { $set: updatedBook });
+      const result = await bookCollection.updateOne(query, {
+        $set: updatedBook,
+      });
       res.send(result);
-    }) 
+    });
 
-
-    app.delete('/all-books/:id', async (req, res) => {
+    app.delete("/all-books/:id", verifyFBToken, async (req, res) => {
       const { id } = req.params;
       const query = { _id: new ObjectId(id) };
       const bookResult = await bookCollection.deleteOne(query);
       const orderResult = await orderCollection.deleteMany({
         bookId: id,
-      })
+      });
 
       res.send({
         deletedCount: bookResult.deletedCount,
         ordersDeleted: orderResult.deletedCount,
       });
-
-    })
+    });
 
     //orders related api.
-    app.post('/orders', async (req, res) => {
+    app.post("/orders", async (req, res) => {
       const order = req.body;
-      order.orderStatus = 'pending';
-      order.paymentStatus = 'unpaid';
+      order.orderStatus = "pending";
+      order.paymentStatus = "unpaid";
       order.createdAt = new Date();
       const result = await orderCollection.insertOne(order);
       res.send(result);
-    })
+    });
 
-    app.get('/orders/customer', async (req, res) => {
+    app.get("/orders/customer", verifyFBToken, async (req, res) => {
       const { email } = req.query;
       const query = {};
       if (email) {
@@ -182,9 +218,9 @@ async function run() {
       }
       const result = await orderCollection.find(query).toArray();
       res.send(result);
-    })
+    });
 
-    app.patch("/orders/cancel/:id", async (req, res) => {
+    app.patch("/orders/cancel/:id", verifyFBToken, async (req, res) => {
       const id = req.params.id;
       const result = await orderCollection.updateOne(
         { _id: new ObjectId(id) },
@@ -193,10 +229,10 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/orders", async (req, res) => {
+    app.get("/orders", verifyFBToken, async (req, res) => {
       const librarianEmail = req.query.librarianEmail;
       const query = {};
-      console.log('librarianemail ', librarianEmail);
+      // console.log('librarianemail ', librarianEmail);
       if (librarianEmail) {
         query.librarianEmail = librarianEmail;
       }
@@ -209,21 +245,18 @@ async function run() {
       res.send(result);
     });
 
-
-    app.patch("/orders/:id", async (req, res) => {
+    app.patch("/orders/:id", verifyFBToken, async (req, res) => {
       const id = req.params.id;
       const { orderStatus } = req.body;
       const query = { _id: new ObjectId(id) };
-      const result = await orderCollection.updateOne(
-        query,
-        { $set: { orderStatus } },
-      );
+      const result = await orderCollection.updateOne(query, {
+        $set: { orderStatus },
+      });
 
       res.send(result);
     });
 
-
-    app.delete("/orders/:id", async (req, res) => {
+    app.delete("/orders/:id", verifyFBToken, async (req, res) => {
       const id = req.params.id;
 
       const result = await orderCollection.deleteOne({
@@ -233,108 +266,106 @@ async function run() {
       res.send(result);
     });
 
-
-
-
-
     //payment related api
-     app.post("/create-checkout-session", async (req, res) => {
-       const paymentInfo = req.body;
-       const amount = parseInt(paymentInfo.amount) * 100;
-       const session = await stripe.checkout.sessions.create({
-         line_items: [
-           {
-             price_data: {
-               currency: "USD",
-               unit_amount: amount,
-               product_data: {
-                 name: `Please pay for: ${paymentInfo.bookName}`,
-               },
-             },
-             quantity: 1,
-           },
-         ],
-         customer_email: paymentInfo.customerEmail,
-         metadata: {
-           orderId: paymentInfo.orderId,
-           productName: paymentInfo.bookName,
-         },
-         mode: "payment",
-         success_url: `${process.env.SITE_DIMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-         cancel_url: `${process.env.SITE_DIMAIN}/dashboard/payment-cancelled`,
-       });
+    app.post("/create-checkout-session", async (req, res) => {
+      const paymentInfo = req.body;
+      const amount = parseInt(paymentInfo.amount) * 100;
+      const session = await stripe.checkout.sessions.create({
+        line_items: [
+          {
+            price_data: {
+              currency: "USD",
+              unit_amount: amount,
+              product_data: {
+                name: `Please pay for: ${paymentInfo.bookName}`,
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        customer_email: paymentInfo.customerEmail,
+        metadata: {
+          orderId: paymentInfo.orderId,
+          productName: paymentInfo.bookName,
+        },
+        mode: "payment",
+        success_url: `${process.env.SITE_DIMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.SITE_DIMAIN}/dashboard/payment-cancelled`,
+      });
 
-       res.send({ url: session.url });
-     });
-    
-    
-     app.patch("/payment-success", async (req, res) => {
-       const trackingId = generateTrackingId();
-       const sessionId = req.query.session_id;
-       // console.log('session id is ', sessionId);
-       const session = await stripe.checkout.sessions.retrieve(sessionId);
-       // console.log('session is ', session);
+      res.send({ url: session.url });
+    });
 
-       const transactionId = session.payment_intent;
-       const query = { transactionId: transactionId };
-       const paymentExist = await paymentCollection.findOne(query);
-       console.log("payment exist ", paymentExist);
-       if (paymentExist) {
-         return res.send({
-           message: "Already exist this payment",
-           transactionId,
-           trackingId: paymentExist.trackingId,
-         });
-       }
+    app.patch("/payment-success", async (req, res) => {
+      const trackingId = generateTrackingId();
+      const sessionId = req.query.session_id;
+      // console.log('session id is ', sessionId);
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      // console.log('session is ', session);
 
-       if (session.payment_status === "paid") {
-         const id = session.metadata.orderId;
-         // console.log('parcel id is ', id);
-         const query = { _id: new ObjectId(id) };
-         const update = {
-           $set: {
-             paymentStatus: "paid",
-             trackingId: trackingId,
-           },
-         };
-         const result = await orderCollection.updateOne(query, update);
-         const payment = {
-           amount: session.amount_total / 100,
-           currency: session.currency,
-           customerEmail: session.customer_email,
-           orderId: session.metadata.orderId,
-           bookName: session.metadata.productName,
-           transactionId: session.payment_intent,
-           paymentStatus: session.payment_status,
-           paidAt: new Date(),
-           trackingId,
-         };
-         if (session.payment_status === "paid") {
-           const resultPay = await paymentCollection.insertOne(payment);
-           res.send({
-             success: true,
-             trackingId: trackingId,
-             transactionId: session.payment_intent,
-             modifyParcel: result,
-             paymentInfo: resultPay,
-           });
-         }
-       }
-       res.send({ success: false });
-     });
-    
-    
-    app.get('/payments', async (req, res) => {
+      const transactionId = session.payment_intent;
+      const query = { transactionId: transactionId };
+      const paymentExist = await paymentCollection.findOne(query);
+      console.log("payment exist ", paymentExist);
+      if (paymentExist) {
+        return res.send({
+          message: "Already exist this payment",
+          transactionId,
+          trackingId: paymentExist.trackingId,
+        });
+      }
+
+      if (session.payment_status === "paid") {
+        const id = session.metadata.orderId;
+        // console.log('parcel id is ', id);
+        const query = { _id: new ObjectId(id) };
+        const update = {
+          $set: {
+            paymentStatus: "paid",
+            trackingId: trackingId,
+          },
+        };
+        const result = await orderCollection.updateOne(query, update);
+        const payment = {
+          amount: session.amount_total / 100,
+          currency: session.currency,
+          customerEmail: session.customer_email,
+          orderId: session.metadata.orderId,
+          bookName: session.metadata.productName,
+          transactionId: session.payment_intent,
+          paymentStatus: session.payment_status,
+          paidAt: new Date(),
+          trackingId,
+        };
+        if (session.payment_status === "paid") {
+          const resultPay = await paymentCollection.insertOne(payment);
+          res.send({
+            success: true,
+            trackingId: trackingId,
+            transactionId: session.payment_intent,
+            modifyParcel: result,
+            paymentInfo: resultPay,
+          });
+        }
+      }
+      res.send({ success: false });
+    });
+
+    app.get("/payments", verifyFBToken, async (req, res) => {
       const { email } = req.query;
       const query = {};
       if (email) {
         query.customerEmail = email;
+        if (email !== req.decoded_email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
       }
-      const result = await paymentCollection.find(query).sort({ paidAt: -1 }).toArray();
+      const result = await paymentCollection
+        .find(query)
+        .sort({ paidAt: -1 })
+        .toArray();
       res.send(result);
-    })
-
-    
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
