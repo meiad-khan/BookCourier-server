@@ -131,7 +131,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/orders', async (req, res) => {
+    app.get('/orders/customer', async (req, res) => {
       const { email } = req.query;
       const query = {};
       if (email) {
@@ -149,6 +149,49 @@ async function run() {
       );
       res.send(result);
     });
+
+    app.get("/orders", async (req, res) => {
+      const librarianEmail = req.query.librarianEmail;
+      const query = {};
+      console.log('librarianemail ', librarianEmail);
+      if (librarianEmail) {
+        query.librarianEmail = librarianEmail;
+      }
+
+      const result = await orderCollection
+        .find(query)
+        .sort({ createdAt: -1 })
+        .toArray();
+
+      res.send(result);
+    });
+
+
+    app.patch("/orders/:id", async (req, res) => {
+      const id = req.params.id;
+      const { orderStatus } = req.body;
+      const query = { _id: new ObjectId(id) };
+      const result = await orderCollection.updateOne(
+        query,
+        { $set: { orderStatus } },
+      );
+
+      res.send(result);
+    });
+
+
+    app.delete("/orders/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const result = await orderCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+
+      res.send(result);
+    });
+
+
+
 
 
     //payment related api
