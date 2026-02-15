@@ -63,6 +63,28 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/users', async(req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    })
+
+    app.patch("/users/role/:id", async (req, res) => {
+      const { id } = req.params;
+      const { role } = req.body;
+      const query = { _id: new ObjectId(id) };
+      const result = await userCollection.updateOne(query, {
+        $set: { role }
+      });
+      res.send(result);
+    })
+
+    app.get('/users/:email/role', async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const user = await userCollection.findOne(query);
+      res.send({ role: user?.role || 'user' });
+    })
+
 
     //book related api
     app.post('/books', async (req, res) => {
