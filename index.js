@@ -15,11 +15,19 @@ app.use(express.json());
 
 const admin = require("firebase-admin");
 
-const serviceAccount = require("./libraGoFirebase.json");
+// const serviceAccount = require("./libraGoFirebase.json");
+// const serviceAccount = require("./firebase-admin-key.json");
+
+const decoded = Buffer.from(process.env.FB_SECRET_KEY, "base64").toString(
+  "utf8",
+);
+const serviceAccount = JSON.parse(decoded);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
+
+
 
 const verifyFBToken = async (req, res, next) => {
   const token = req.headers.authorization;
@@ -165,7 +173,10 @@ async function run() {
       if (email) {
         query.librarianEmail = email;
       }
-      const result = await bookCollection.find(query).toArray();
+      const result = await bookCollection
+        .find(query)
+        .sort({ createdAt : -1})
+        .toArray();
       res.send(result);
     });
 
@@ -368,10 +379,10 @@ async function run() {
     });
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!",
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!",
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
