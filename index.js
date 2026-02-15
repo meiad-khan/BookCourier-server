@@ -100,9 +100,9 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/all-books', async (req, res) => {
+    app.get('/all-books/published', async (req, res) => {
        const {
-         limit = 6,
+         limit = 0,
          skip = 0,
        } = req.query;
       const skipNum = parseInt(skip);
@@ -115,6 +115,11 @@ async function run() {
         .toArray();
       const count = await bookCollection.countDocuments(query);
       res.send({ result, total: count });
+    })
+
+    app.get('/all-books', async (req, res) => {
+      const result = await bookCollection.find().toArray();
+      res.send(result);
     })
 
     app.get('/books', async (req, res) => {
@@ -142,6 +147,22 @@ async function run() {
       const result = await bookCollection.updateOne(query, { $set: updatedBook });
       res.send(result);
     }) 
+
+
+    app.delete('/all-books/:id', async (req, res) => {
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) };
+      const bookResult = await bookCollection.deleteOne(query);
+      const orderResult = await orderCollection.deleteMany({
+        bookId: id,
+      })
+
+      res.send({
+        deletedCount: bookResult.deletedCount,
+        ordersDeleted: orderResult.deletedCount,
+      });
+
+    })
 
     //orders related api.
     app.post('/orders', async (req, res) => {
