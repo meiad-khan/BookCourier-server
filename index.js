@@ -227,7 +227,7 @@ async function run() {
       if (email) {
         query.customerEmail = email;
       }
-      const result = await orderCollection.find(query).toArray();
+      const result = await orderCollection.find(query).sort({createdAt: -1}).toArray();
       res.send(result);
     });
 
@@ -376,6 +376,50 @@ async function run() {
         .sort({ paidAt: -1 })
         .toArray();
       res.send(result);
+    });
+
+    //blog related api
+    app.get("/blogs", async (req, res) => {
+      try {
+        const limit = parseInt(req.query.limit) || 6;
+        const skip = parseInt(req.query.skip) || 0;
+
+        const blogsCollection = db.collection("blogs");
+
+        const result = await blogsCollection
+          .find()
+          .sort({ createdAt: -1 }) // latest first
+          .skip(skip)
+          .limit(limit)
+          .toArray();
+
+        const total = await blogsCollection.countDocuments();
+
+        res.send({
+          result,
+          total,
+        });
+      } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: "Failed to fetch blogs" });
+      }
+    });
+
+    app.get("/blogs/:slug", async (req, res) => {
+      try {
+        const slug = req.params.slug;
+
+        const blog = await db.collection("blogs").findOne({ slug });
+
+        if (!blog) {
+          return res.status(404).send({ message: "Blog not found" });
+        }
+
+        res.send(blog);
+      } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: "Error fetching blog" });
+      }
     });
 
     // Send a ping to confirm a successful connection
